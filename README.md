@@ -1,5 +1,3 @@
-# EzyReach-Web
-Final Project 
 Here's a README tailored for the web application version of *EzyReach*:
 
 ---
