@@ -1,2 +1,2 @@
-# EzyReach---Web-Application
+# EzyReach-Web
 Final Project 
