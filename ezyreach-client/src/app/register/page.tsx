@@ -1,14 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import GoogleButton from '@/component/GoogleSignInButton';
+import { registerUser } from '@/firebase/firebaseHelpers'; // Import the registerUser function
 
 export default function RegisterSalesRep() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: '', shopName: '', brNumber: '', shopLocation: '', companyName: '', branchLocation: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: '',
+    shopName: '',
+    shopLocation: '',
+    companyName: '',
+    branchLocation: '',
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
+    
+    try {
+      // Call the registerUser function to send data to Firebase
+      const result = await registerUser(form);
+      if (result.success) {
+        console.log('User registered successfully', result);
+        // Optionally, you can redirect to a different page after successful registration
+      } else {
+        console.log('Registration failed');
+      }
+    } catch (error) {
+      console.error('Error registering user:', error);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -35,7 +57,6 @@ export default function RegisterSalesRep() {
           </option>
           <option value="sales_rep">Sales Representative</option>
           <option value="shop_owner">Shop Owner</option>
-          <option value="admin">Admin</option>
         </select>
 
         {form.role === 'sales_rep' && (
@@ -77,6 +98,15 @@ export default function RegisterSalesRep() {
               className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
             />
             <input
+              name="phone"
+              type="tel"
+              placeholder="Phone Number"
+              value={form.phone}
+              onChange={handleChange}
+              required
+              className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
+            />
+            <input
               name="password"
               type="password"
               placeholder="Password"
@@ -109,15 +139,6 @@ export default function RegisterSalesRep() {
               className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
             />
             <input
-              name="brNumber"
-              type="text"
-              placeholder="BR Number"
-              value={form.brNumber}
-              onChange={handleChange}
-              required
-              className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
-            />
-            <input
               name="shopLocation"
               type="text"
               placeholder="Shop Location"
@@ -136,24 +157,10 @@ export default function RegisterSalesRep() {
               className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
             />
             <input
-              name="password"
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
-            />
-          </>
-        )}
-
-        {form.role === 'admin' && (
-          <>
-            <input
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={form.email}
+              name="phone"
+              type="tel"
+              placeholder="Phone Number"
+              value={form.phone}
               onChange={handleChange}
               required
               className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
@@ -176,7 +183,6 @@ export default function RegisterSalesRep() {
         >
           Register
         </button>
-        <GoogleButton />
       </form>
     </div>
   );
