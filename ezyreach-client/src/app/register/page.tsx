@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter for redirection
 import { registerUser } from '@/firebase/firebaseHelpers'; // Import the registerUser function
 
 export default function RegisterSalesRep() {
@@ -16,20 +17,32 @@ export default function RegisterSalesRep() {
     branchLocation: '',
   });
 
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); // State for success message
+  const [loading, setLoading] = useState(false); // State for loading
+  const router = useRouter(); // For page redirection
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setLoading(true); // Start loading
+
     try {
       // Call the registerUser function to send data to Firebase
       const result = await registerUser(form);
       if (result.success) {
         console.log('User registered successfully', result);
-        // Optionally, you can redirect to a different page after successful registration
+        setSuccessMessage('Registration successful! Redirecting to login...'); // Set success message
+        setTimeout(() => {
+          router.push('/login'); // Redirect to login page after success
+        }, 2000); // Redirect after 2 seconds
       } else {
         console.log('Registration failed');
+        setSuccessMessage('Registration failed. Please try again.'); // Set error message
       }
     } catch (error) {
       console.error('Error registering user:', error);
+      setSuccessMessage('An error occurred. Please try again later.'); // Set error message
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -177,11 +190,16 @@ export default function RegisterSalesRep() {
           </>
         )}
 
+        {successMessage && (
+          <div className="text-green-500 mb-4">{successMessage}</div>
+        )}
+
         <button
           type="submit"
           className="w-full p-3 bg-[#8906E6] text-white rounded-lg hover:bg-purple-800 transition"
+          disabled={loading}
         >
-          Register
+          {loading ? 'Registering...' : 'Register'}
         </button>
       </form>
     </div>

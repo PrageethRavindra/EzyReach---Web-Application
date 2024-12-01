@@ -1,6 +1,6 @@
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { app } from "./firebase"; // Your Firebase config initialization
+import { app } from "./../firebase/firebase"; // Your Firebase config initialization
 
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -53,8 +53,9 @@ export const registerUser = async (userData: {
       // You can add any additional fields for the admin if necessary
     }
 
-    // Save user to Firestore
-    const docRef = await addDoc(collection(db, userData.role === "sales_rep" ? "sales-rep" : "shop-owner"), userDoc);
+    // Use the correct Firestore collection based on the role
+    const collectionName = userData.role === "sales_rep" ? "sales-rep" : "shop-owner";
+    const docRef = await addDoc(collection(db, collectionName), userDoc);
 
     return { success: true, docId: docRef.id };
   } catch (error) {
