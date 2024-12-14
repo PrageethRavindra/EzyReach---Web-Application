@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, query, where, getDocs, collection } from 'firebase/firestore';
+import { app } from '../../firebase/firebase'; // Import Firebase config
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,14 +17,43 @@ export default function LoginPage() {
     setError(''); // Clear any previous error messages
 
     try {
-      const auth = getAuth();
-      
+      const auth = getAuth(app); // Pass the initialized app to getAuth
       // Sign in with Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Redirect the user upon successful login
+      // Get Firestore instance
+      const db = getFirestore(app); // Pass the initialized app to getFirestore
+
+      // Query for the user role based on the entered email
+      const roleCollections = ['company', 'sales-rep', 'shop_owner'];
+      let userRole = '';
+
+      // Loop through the role collections to find the user
+      for (const role of roleCollections) {
+        const usersCollection = collection(db, role);
+        const q = query(usersCollection, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          userRole = role; // Found the user in the respective role collection
+          break;
+        }
+      }
+
+      if (userRole) {
+        // Redirect user based on their role
+        if (userRole === 'company') {
+          router.push('/company_Dashboard');
+        } else if (userRole === 'shop_owner') {
+          router.push('/shop-owners');
+        } else if (userRole === 'sales-rep') {
+          router.push('/sales-reps');
+        }
+      } else {
+        setError('User not found in any role.');
+      }
+
       console.log('Login successful:', userCredential.user);
-      router.push('/shop-owners'); // Change to the desired route after login
     } catch (err) {
       // Display error messages
       if (err instanceof Error) {

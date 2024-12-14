@@ -19,6 +19,7 @@ export const registerUser = async (userData: {
   shopLocation?: string;
   companyName?: string;
   branchLocation?: string;
+  companyLocation?: string;
 }) => {
   try {
     // Create user in Firebase Auth
@@ -48,13 +49,14 @@ export const registerUser = async (userData: {
       userDoc.shopLocation = userData.shopLocation || "";
     }
 
-    if (userData.role === "admin") {
-      userDoc.name = userData.name || "";
-      // You can add any additional fields for the admin if necessary
+    if (userData.role === "company") {
+      userDoc.companyName = userData.companyName || "";
+      userDoc.companyLocation = userData.companyLocation || "";
+      
     }
 
     // Use the correct Firestore collection based on the role
-    const collectionName = userData.role === "sales_rep" ? "sales-rep" : "shop-owner";
+    const collectionName = userData.role === "sales_rep" ? "sales-rep" : userData.role === "shop_owner" ? "shop_owner" : "company";
     const docRef = await addDoc(collection(db, collectionName), userDoc);
 
     return { success: true, docId: docRef.id };
