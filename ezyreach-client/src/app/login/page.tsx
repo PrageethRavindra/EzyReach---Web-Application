@@ -17,31 +17,29 @@ export default function LoginPage() {
     setError(''); // Clear any previous error messages
 
     try {
-      const auth = getAuth(app); // Pass the initialized app to getAuth
-      // Sign in with Firebase Authentication
+      const auth = getAuth(app);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Get Firestore instance
-      const db = getFirestore(app); // Pass the initialized app to getFirestore
-
-      // Query for the user role based on the entered email
+      const db = getFirestore(app);
       const roleCollections = ['company', 'sales-rep', 'shop_owner'];
       let userRole = '';
 
-      // Loop through the role collections to find the user
       for (const role of roleCollections) {
         const usersCollection = collection(db, role);
         const q = query(usersCollection, where('email', '==', email));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          userRole = role; // Found the user in the respective role collection
+          userRole = role;
           break;
         }
       }
 
       if (userRole) {
-        // Redirect user based on their role
+        // Set session cookie
+        document.cookie = `userEmail=${email}; path=/; max-age=86400; secure; samesite=strict;`;
+
+        // Redirect based on role
         if (userRole === 'company') {
           router.push('/company_Dashboard');
         } else if (userRole === 'shop_owner') {
@@ -55,7 +53,6 @@ export default function LoginPage() {
 
       console.log('Login successful:', userCredential.user);
     } catch (err) {
-      // Display error messages
       if (err instanceof Error) {
         setError(err.message);
       } else {

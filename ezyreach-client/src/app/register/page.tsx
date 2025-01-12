@@ -12,7 +12,7 @@ export default function RegisterSalesRep() {
     email: '',
     phone: '',
     password: '',
-    role: '',
+    user_type: '',
     shopName: '',
     shopLocation: '',
     companyName: '',
@@ -83,21 +83,21 @@ export default function RegisterSalesRep() {
       >
         <h2 className="mb-4 text-[#1b1a1b] text-2xl font-bold">Register</h2>
         <select
-          name="role"
-          value={form.role}
+          name="user_type"
+          value={form.user_type}
           onChange={handleChange}
           required
           className="w-full mb-4 p-3 rounded-lg text-gray-900 border-none"
         >
           <option value="" disabled>
-            Select Role
+            Select User Type
           </option>
           <option value="sales_rep">Sales Representative</option>
           <option value="shop_owner">Shop Owner</option>
           <option value="company">Company</option>
         </select>
 
-        {form.role === 'sales_rep' && (
+        {form.user_type === 'sales_rep' && (
           <>
             <input
               name="name"
@@ -163,7 +163,7 @@ export default function RegisterSalesRep() {
           </>
         )}
 
-        {form.role === 'shop_owner' && (
+        {form.user_type === 'shop_owner' && (
           <>
             <input
               name="name"
@@ -222,7 +222,7 @@ export default function RegisterSalesRep() {
           </>
         )}
 
-        {form.role === 'company' && (
+        {form.user_type === 'company' && (
           <>
             <input
               name="companyName"

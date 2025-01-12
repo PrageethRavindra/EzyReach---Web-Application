@@ -14,7 +14,7 @@ export const registerUser = async (userData: {
   email: string;
   phone?: string;
   password: string;
-  role: string;
+  user_type: string;
   shopName?: string;
   shopLocation?: string;
   companyName?: string;
@@ -31,32 +31,32 @@ export const registerUser = async (userData: {
     const userDoc: any = {
       email: userData.email,
       phone: userData.phone || "",
-      role: userData.role,
+      user_type: userData.user_type,
       createdAt: new Date().toISOString(),
       userId, // Reference to the Firebase Auth user ID
     };
 
     // Include role-specific fields
-    if (userData.role === "sales_rep") {
+    if (userData.user_type === "sales_rep") {
       userDoc.name = userData.name || "";
       userDoc.companyName = userData.companyName || "";
       userDoc.branchLocation = userData.branchLocation || "";
     }
 
-    if (userData.role === "shop_owner") {
+    if (userData.user_type === "shop_owner") {
       userDoc.name = userData.name || "";
       userDoc.shopName = userData.shopName || "";
       userDoc.shopLocation = userData.shopLocation || "";
     }
 
-    if (userData.role === "company") {
+    if (userData.user_type === "company") {
       userDoc.companyName = userData.companyName || "";
       userDoc.companyLocation = userData.companyLocation || "";
       
     }
 
     // Use the correct Firestore collection based on the role
-    const collectionName = userData.role === "sales_rep" ? "sales-rep" : userData.role === "shop_owner" ? "shop_owner" : "company";
+    const collectionName = userData.user_type === "sales_rep" ? "sales-rep" : userData.user_type === "shop_owner" ? "shop_owner" : "company";
     const docRef = await addDoc(collection(db, collectionName), userDoc);
 
     return { success: true, docId: docRef.id };

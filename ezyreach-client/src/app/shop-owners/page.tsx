@@ -1,110 +1,149 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function CompaniesPage() {
-  const companies = [
-    { 
-      id: 1, 
-      name: "Unilever", 
-      description: "Leading supplier of groceries.", 
-      image: "/images/Unilever-Logo.png" 
-    },
-    { 
-      id: 2, 
-      name: "Coca-Cola", 
-      description: "refresh the world.", 
-      image: "/images/Coca-Cola-Logo.png" 
-    },
-    { 
-      id: 3, 
-      name: "Elephant House", 
-      description: "High-quality fabrics and more.", 
-      image: "/images/elephant-house.jpg" 
-    },
-  ];
+const featureList = [
+  "Dashboard Overview",
+  "Partnership Management",
+  "Product Management",
+  "Order Management",
+  "Analytics and Reports",
+  "Shop Profile Management",
+  "Communication Tools",
+  "Support and Feedback",
+];
+
+const ShopOwnerDashboard = () => {
+  const [selectedFeature, setSelectedFeature] = useState(featureList[0]);
+  const [isPanelOpen, setIsPanelOpen] = useState(false); // Popup state
+  const router = useRouter();
+
+  const handleLogout = () => {
+    try {
+      if (confirm("Are you sure you want to logout?")) {
+        localStorage.clear();
+        router.push("/login");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
+
+  const togglePanel = () => setIsPanelOpen(!isPanelOpen);
+
+  const renderFeature = () => {
+    switch (selectedFeature) {
+      case "Dashboard Overview":
+        return (
+          <section className="dashboard-overview bg-gray-800 text-gray-100 shadow-lg rounded-xl p-6">
+            <h2 className="text-3xl font-semibold text-blue-400 mb-4">
+              Dashboard Overview
+            </h2>
+            <div className="stats grid grid-cols-2 gap-6">
+              <div className="bg-blue-700 text-blue-100 p-6 rounded-xl shadow">
+                <p className="text-lg">Total Sales</p>
+                <p className="text-3xl font-bold">$0.00</p>
+              </div>
+              <div className="bg-green-700 text-green-100 p-6 rounded-xl shadow">
+                <p className="text-lg">Active Partnerships</p>
+                <p className="text-3xl font-bold">0</p>
+              </div>
+            </div>
+            <div className="notifications mt-6">
+              <p className="text-gray-400">No new notifications.</p>
+            </div>
+          </section>
+        );
+      case "Partnership Management":
+        return (
+          <section className="partnership-management bg-gray-800 text-gray-100 shadow-lg rounded-xl p-6">
+            <h2 className="text-3xl font-semibold text-green-400 mb-4">
+              Partnership Management
+            </h2>
+            <div className="flex gap-4">
+              <button className="bg-green-500 text-white py-2 px-6 rounded-lg shadow hover:bg-green-600">
+                View Partnership Requests
+              </button>
+              <button className="bg-green-500 text-white py-2 px-6 rounded-lg shadow hover:bg-green-600">
+                Active Partnerships
+              </button>
+            </div>
+          </section>
+        );
+      default:
+        return (
+          <section className="p-6 text-gray-400">
+            <h2 className="text-xl">Select a feature from the menu.</h2>
+          </section>
+        );
+    }
+  };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Sales Representatives' Companies</h1>
-      <div style={styles.grid}>
-        {companies.map((company) => (
-          <div key={company.id} style={styles.card}>
-            <img src={company.image} alt={company.name} style={styles.image} />
-            <h2 style={styles.cardTitle}>{company.name}</h2>
-            <p style={styles.cardDescription}>{company.description}</p>
-            <a href={`/shop-owners/companies/${company.id}`} style={styles.button}>
-              View Details
-            </a>
-          </div>
-        ))}
-      </div>
+    <div className="shop-owner-dashboard bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+      {/* Top Bar */}
+      <header className="bg-gray-800 p-4 shadow-lg flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-white">Shop Owner Dashboard</h1>
+        <button
+          className="bg-blue-500 text-white py-2 px-4 rounded-lg shadow hover:bg-blue-600"
+          onClick={togglePanel}
+        >
+          Menu
+        </button>
+      </header>
+
+      {/* Main Content */}
+      <main className="main-content flex-1 p-8">{renderFeature()}</main>
+
+      {/* Popup Panel */}
+      {isPanelOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-end z-50"
+          onClick={togglePanel}
+        >
+          <nav
+            className="bg-gray-800 w-3/4 max-w-sm p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="text-gray-400 hover:text-gray-200 text-lg mb-6"
+              onClick={togglePanel}
+            >
+              Close &times;
+            </button>
+            <ul className="space-y-4">
+              {featureList.map((feature) => (
+                <li key={feature}>
+                  <button
+                    className={`w-full text-left py-3 px-6 rounded-lg font-medium transition-all ${
+                      selectedFeature === feature
+                        ? "bg-blue-500 text-white shadow-lg"
+                        : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                    }`}
+                    onClick={() => {
+                      setSelectedFeature(feature);
+                      togglePanel();
+                    }}
+                  >
+                    {feature}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-10">
+              <button
+                className="w-full bg-red-500 text-white py-3 px-6 rounded-lg shadow hover:bg-red-600"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
     </div>
   );
-}
-
-import { CSSProperties } from "react";
-
-const styles: { [key: string]: CSSProperties } = {
-  container: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "20px",
-    fontFamily: "'Arial', sans-serif",
-    color: "#333",
-  },
-  title: {
-    textAlign: "center",
-    fontSize: "2.5rem",
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: "40px",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "30px",
-  },
-  card: {
-    backgroundColor: "#fff",
-    border: "1px solid #ddd",
-    borderRadius: "12px",
-    padding: "20px",
-    textAlign: "center",
-    transition: "box-shadow 0.3s ease",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-    overflow: "hidden",
-  },
-  image: {
-    width: "100%",
-    height: "200px",
-    objectFit: "cover",
-    borderRadius: "8px",
-    marginBottom: "15px",
-  },
-  cardTitle: {
-    fontSize: "1.8rem",
-    color: "#0070f3",
-    fontWeight: "600",
-    marginBottom: "10px",
-  },
-  cardDescription: {
-    fontSize: "1rem",
-    color: "#666",
-    marginBottom: "20px",
-  },
-  button: {
-    display: "inline-block",
-    padding: "12px 25px",
-    fontSize: "1rem",
-    fontWeight: "bold",
-    color: "#fff",
-    backgroundColor: "#0070f3",
-    textDecoration: "none",
-    borderRadius: "5px",
-    transition: "background 0.3s ease",
-  },
-  buttonHover: {
-    backgroundColor: "#005bb5",
-  },
 };
+
+export default ShopOwnerDashboard;

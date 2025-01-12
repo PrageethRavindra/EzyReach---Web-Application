@@ -6,7 +6,7 @@ export default function UserProfile() {
   // Initial User Data
   const [user, setUser] = useState({
     name: 'Jeremy Rose',
-    role: 'Product Designer',
+    user_type: 'Product Designer',
     location: 'New York, NY',
     ranking: 8.6,
     profileImage: '/profile-pic.jpg', // Placeholder for uploaded image
@@ -20,7 +20,7 @@ export default function UserProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<{ 
     name: string; 
-    role: string; 
+    user_type: string; 
     location: string; 
     ranking: number; 
     profileImage: string | File; 
@@ -87,7 +87,7 @@ export default function UserProfile() {
           {!isEditing ? (
             <>
               <h2 className="text-2xl mt-4">{user.name}</h2>
-              <p className="text-purple-200">{user.role}</p>
+              <p className="text-purple-200">{user.user_type}</p>
               <p>{user.location}</p>
             </>
           ) : (
@@ -102,11 +102,11 @@ export default function UserProfile() {
               />
               <input
                 type="text"
-                name="role"
-                value={formData.role}
+                name="user_type"
+                value={formData.user_type}
                 onChange={handleInputChange}
                 className="block w-full bg-gray-700 p-2 rounded"
-                placeholder="Role"
+                placeholder="user_type"
               />
               <input
                 type="text"
