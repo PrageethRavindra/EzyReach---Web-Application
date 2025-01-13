@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // For redirection
+import { useRouter } from 'next/navigation';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc, addDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from '../../firebase/firebase'; // Adjust path to Firebase config file
+// After successful login
+import { getAuth } from 'firebase/auth';
 
+const auth = getAuth();
+const user = auth.currentUser;
+
+if (user) {
+  document.cookie = `userEmail=${user.email}; path=/; max-age=3600`;  // Save email in cookie for 1 hour
+  console.log("Login successful, user email stored in cookies:", user.email);
+}
 const featureList = [
   'View Product List',
   'Add Product',
@@ -20,6 +29,7 @@ type CompanyDetails = {
 };
 
 type ProductDetails = {
+  id?: string; // Add the id property
   productName: string;
   category: string;
   price: number;
@@ -43,7 +53,7 @@ const CompanyDashboard = () => {
   }); 
 
   const router = useRouter();
-
+  ///////////////////////////////////////////////////////////// Logout function////////////////////////////////////////////////////////
   const handleLogout = () => {
     try {
       if (confirm('Are you sure you want to logout?')) {
@@ -57,6 +67,7 @@ const CompanyDashboard = () => {
 
   const togglePanel = () => setIsPanelOpen(!isPanelOpen);
 
+  /////////////////////////////////////////////////////////////Fetch Company Details////////////////////////////////////////////////////////
   useEffect(() => {
     const fetchCompanyDetails = async () => {
       try {
@@ -83,10 +94,10 @@ const CompanyDashboard = () => {
       }
     };
   
-    fetchCompanyDetails();
+    
   }, []);
   
-
+///////////////////////////////////////////////////////////// Fetch products based on logged-in user email////////////////////////////////////////////////////////
   // Fetch products based on logged-in user email
   const [products, setProducts] = useState<any[]>([]);
   useEffect(() => {
@@ -119,10 +130,13 @@ const CompanyDashboard = () => {
     }
   }, [selectedFeature]);
 
+  
+  /////////////////////////////////////////////////////////////Edit Company Details////////////////////////////////////////////////////////
   const handleEditClick = () => {
     setEditDetails(companyDetails); // Pre-fill form with current details
     setIsEditing(true);
   };
+
 
   const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
     if (editDetails) {
@@ -136,21 +150,103 @@ const CompanyDashboard = () => {
     }
   };
 
-  const handleEditProduct = (product: { productName: any; category: any; price: any; imageUrl: any; email: any; }) => {
-    // Pre-fill the form with product details for editing
+  /////////////////////////////////////////////////////////////Edit Product details////////////////////////////////////////////////////////
+  const handleEditProduct = (product: ProductDetails) => {
+    // Update product details state
     setProductDetails({
+      id: product.id, // Ensure the product ID is captured
       productName: product.productName,
       category: product.category,
       price: product.price,
-      imageUrl: product.imageUrl || null, // Optional
+      imageUrl: product.imageUrl || null, // Handle optional image URL
       email: product.email,
     });
   
-    // Optionally, set a flag or open a modal for editing
-    setIsEditingProduct(true);
+    // Set the feature to "Edit Product" to display the edit form
+    setSelectedFeature("Edit Product");
+  
+    // Optionally, set editing mode
+    setIsEditing(true);
   };
   
+  
+  
+  /////////////////////////////////////////////////////////////Fetch Product////////////////////////////////////////////////////////
+  const fetchProducts = async () => {
+    try {
+      const email = getCookie('userEmail');
+      if (!email) {
+        console.warn('No email found in session.');
+        return;
+      }
 
+      const db = getFirestore(app);
+      const productCollection = collection(db, 'products');
+      const q = query(productCollection, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const productData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setProducts(productData);
+      } else {
+        console.warn('No products found for this email.');
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  /////////////////////////////////////////////////////////////Save Edited Product////////////////////////////////////////////////////////
+  const handleSaveEditedProduct = async () => {
+    // Validate product details
+    if (!productDetails.productName || !productDetails.category || productDetails.price <= 0) {
+      alert("Please fill in all fields.");
+      return;
+    }
+  
+    if (!productDetails.id) {
+      alert("Product ID is missing. Cannot update product.");
+      return;
+    }
+  
+    try {
+      const db = getFirestore(app);
+      const storage = getStorage(app);
+  
+      let newImageUrl = productDetails.imageUrl;  // Retain the existing image URL by default
+  
+      // Upload new image if a file is selected
+      if (selectedFile) {
+        const uniqueFileName = `${Date.now()}-${selectedFile.name}`;  // Generate a unique filename
+        const imageRef = ref(storage, `products/${uniqueFileName}`);
+        const snapshot = await uploadBytes(imageRef, selectedFile);
+        newImageUrl = await getDownloadURL(snapshot.ref);
+      }
+  
+      // Reference to the product in Firestore
+      const productDocRef = doc(db, "products", productDetails.id);
+  
+      // Update product details in Firestore
+      await updateDoc(productDocRef, {
+        productName: productDetails.productName,
+        category: productDetails.category,
+        price: productDetails.price,
+        imageUrl: newImageUrl,  // Update with the new image URL if applicable
+        updatedAt: new Date().toISOString(),  // Add a timestamp for when the product was updated
+      });
+  
+      alert("Product updated successfully!");
+      setIsEditing(false);  // Exit edit mode
+      fetchProducts();  // Re-fetch products to update the list in UI
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert("Failed to update product. Please try again.");
+    }
+  };
+  
+  
+  
+  /////////////////////////////////////////////////////////////Delete Product////////////////////////////////////////////////////////
   const handleDeleteProduct = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
   
@@ -171,7 +267,7 @@ const CompanyDashboard = () => {
     }
   };
   
-
+  /////////////////////////////////////////////////////////////Deactivate Account////////////////////////////////////////////////////////
   const handleDeactivateAccount = async () => {
     if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) {
       try {
@@ -199,6 +295,7 @@ const CompanyDashboard = () => {
     }
   };
 
+  /////////////////////////////////////////////////////////////Save Edited Company Details////////////////////////////////////////////////////////
   const handleSave = async () => {
     if (!editDetails || !companyDetails) return;
 
@@ -230,6 +327,7 @@ const CompanyDashboard = () => {
     }
   };
 
+  /////////////////////////////////////////////////////////////Add Product////////////////////////////////////////////////////////
   const handleAddProduct = async () => {
     if (!productDetails.productName || !productDetails.category || productDetails.price <= 0) {
       alert('Please fill in all fields.');
@@ -238,10 +336,22 @@ const CompanyDashboard = () => {
   
     try {
       const db = getFirestore(app);
+      const storage = getStorage(app);
   
       if (!companyDetails || !companyDetails.email) {
         alert('Your session seems to be invalid. Please log in again.');
         return;
+      }
+  
+      let imageUrl = null;
+  
+      // Upload image if a file is selected
+      if (selectedFile) {
+        const storageRef = ref(storage, `product-images/${selectedFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, selectedFile);
+  
+        // Get the download URL of the uploaded image
+        imageUrl = await getDownloadURL(uploadResult.ref);
       }
   
       // Add product to Firestore
@@ -251,6 +361,7 @@ const CompanyDashboard = () => {
         category: productDetails.category,
         price: productDetails.price,
         email: companyDetails.email, // Add the company email to link the product to the company
+        imageUrl: imageUrl, // Store the image URL
         createdAt: new Date().toISOString(), // Add a timestamp if needed
       });
   
@@ -263,72 +374,237 @@ const CompanyDashboard = () => {
         imageUrl: null, // Optional; can be removed if not needed
         email: companyDetails.email,
       });
+      setSelectedFile(null); // Clear the file input
     } catch (error) {
       console.error('Error adding product:', error);
       alert('Failed to add product. Please try again.');
     }
   };
   
-  
-  
+  /////////////////////////////////////////////////////////////Render Feature////////////////////////////////////////////////////////
   const renderFeature = () => {
     switch (selectedFeature) {
-      case 'View Product List':
+      case "View Product List":
   return (
     <section className="bg-gray-800 text-gray-100 shadow-lg rounded-xl p-6">
       <h2 className="text-3xl font-semibold text-blue-400 mb-4">Product List</h2>
       {products.length > 0 ? (
-        <ul className="divide-y divide-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product) => (
-            <li key={product.id} className="py-4 flex justify-between items-center">
-              <div>
-                <p className="text-lg font-bold">{product.productName}</p>
-                <p className="text-sm text-gray-400">{product.category}</p>
-                <p className="text-sm text-green-400">Price: ${product.price}</p>
+            <div
+              key={product.id}
+              className="bg-gray-700 rounded-lg shadow-lg p-4 flex flex-col justify-between"
+            >
+              <div className="space-y-4">
+                {product.imageUrl && (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.productName}
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                )}
+                <div>
+                  <p className="text-lg font-bold">{product.productName}</p>
+                  <p className="text-sm text-gray-400">{product.category}</p>
+                  <p className="text-sm text-green-400">Price: ${product.price}</p>
+                </div>
               </div>
-              {product.imageUrl && (
-                <img
-                  src={product.imageUrl}
-                  alt={product.productName}
-                  className="w-16 h-16 object-cover rounded-lg"
-                />
-              )}
-              <div className="flex space-x-4">
-                {/* Edit Button */}
+              <div className="flex space-x-2 mt-4">
                 <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                  className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
                   onClick={() => handleEditProduct(product)}
                 >
                   Edit
                 </button>
-                {/* Delete Button */}
                 <button
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
                   onClick={() => handleDeleteProduct(product.id)}
                 >
                   Delete
                 </button>
               </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       ) : (
         <p className="text-gray-400">No products found.</p>
       )}
     </section>
   );
 
-
-      case 'View Account':
+      
+    case "Edit Product":
+      return (
+        <section className="bg-gray-800 text-gray-100 shadow-lg rounded-xl p-6">
+          <h2 className="text-3xl font-semibold text-blue-400 mb-4">Edit Product</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveEditedProduct();  // Submit the updated product data
+            }}
+            className="space-y-4"
+          >
+            <input
+              type="text"
+              name="productName"
+              value={productDetails.productName}
+              onChange={(e) =>
+                setProductDetails({
+                  ...productDetails,
+                  productName: e.target.value,
+                })
+              }
+              className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+              placeholder="Product Name"
+              required
+            />
+            <input
+              type="text"
+              name="category"
+              value={productDetails.category}
+              onChange={(e) =>
+                setProductDetails({
+                  ...productDetails,
+                  category: e.target.value,
+                })
+              }
+              className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+              placeholder="Category"
+              required
+            />
+            <input
+              type="number"
+              name="price"
+              value={productDetails.price}
+              onChange={(e) =>
+                setProductDetails({
+                  ...productDetails,
+                  price: parseFloat(e.target.value),
+                })
+              }
+              className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+              placeholder="Price"
+              min="0"
+              step="0.01"
+              required
+            />
+            <div className="relative w-full">
+              {productDetails.imageUrl && (
+                <img
+                  src={productDetails.imageUrl}
+                  alt="Product Preview"
+                  className="w-full h-32 object-cover rounded-lg mb-4"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0]);
+                  }
+                }}
+                className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-green-500 text-white py-3 px-6 rounded-lg shadow hover:bg-green-600"
+            >
+              Update Product
+            </button>
+          </form>
+        </section>
+          );
+        
+        
+      case "Add Product":
         return (
           <section className="bg-gray-800 text-gray-100 shadow-lg rounded-xl p-6">
-            <h2 className="text-3xl font-semibold text-blue-400 mb-4">Account Details</h2>
+            <h2 className="text-3xl font-semibold text-blue-400 mb-4">Add Product</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddProduct();
+              }}
+              className="space-y-4"
+            >
+              <input
+                type="text"
+                name="productName"
+                value={productDetails.productName}
+                onChange={(e) =>
+                  setProductDetails({
+                    ...productDetails,
+                    productName: e.target.value,
+                  })
+                }
+                className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+                placeholder="Product Name"
+                required
+              />
+              <input
+                type="text"
+                name="category"
+                value={productDetails.category}
+                onChange={(e) =>
+                  setProductDetails({
+                    ...productDetails,
+                    category: e.target.value,
+                  })
+                }
+                className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+                placeholder="Category"
+                required
+              />
+              <input
+                type="number"
+                name="price"
+                value={productDetails.price}
+                onChange={(e) =>
+                  setProductDetails({
+                    ...productDetails,
+                    price: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+                placeholder="Price"
+                min="0"
+                step="0.01"
+                required
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0]);
+                  }
+                }}
+                className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
+              />
+              <button
+                type="submit"
+                className="w-full bg-green-500 text-white py-3 px-6 rounded-lg shadow hover:bg-green-600"
+              >
+                Add Product
+              </button>
+            </form>
+          </section>
+        );
+  
+      case "View Account":
+        return (
+          <section className="bg-gray-800 text-gray-100 shadow-lg rounded-xl p-6">
+            <h2 className="text-3xl font-semibold text-blue-400 mb-4">
+              Account Details
+            </h2>
             {isEditing ? (
               <form className="space-y-4">
                 <input
                   type="text"
                   name="companyName"
-                  value={editDetails?.companyName || ''}
+                  value={editDetails?.companyName || ""}
                   onChange={handleInputChange}
                   className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
                   placeholder="Company Name"
@@ -336,7 +612,7 @@ const CompanyDashboard = () => {
                 <input
                   type="text"
                   name="email"
-                  value={editDetails?.email || ''}
+                  value={editDetails?.email || ""}
                   onChange={handleInputChange}
                   className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
                   placeholder="Email"
@@ -344,7 +620,7 @@ const CompanyDashboard = () => {
                 <input
                   type="text"
                   name="companyLocation"
-                  value={editDetails?.companyLocation || ''}
+                  value={editDetails?.companyLocation || ""}
                   onChange={handleInputChange}
                   className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
                   placeholder="Location"
@@ -352,7 +628,7 @@ const CompanyDashboard = () => {
                 <input
                   type="text"
                   name="phone"
-                  value={editDetails?.phone || ''}
+                  value={editDetails?.phone || ""}
                   onChange={handleInputChange}
                   className="w-full p-3 bg-gray-700 text-gray-100 rounded-lg"
                   placeholder="Phone"
@@ -367,9 +643,13 @@ const CompanyDashboard = () => {
               </form>
             ) : (
               <div>
-                <p className="text-lg mb-2">Name: {companyDetails?.companyName}</p>
+                <p className="text-lg mb-2">
+                  Name: {companyDetails?.companyName}
+                </p>
                 <p className="text-lg mb-2">Email: {companyDetails?.email}</p>
-                <p className="text-lg mb-2">Location: {companyDetails?.companyLocation}</p>
+                <p className="text-lg mb-2">
+                  Location: {companyDetails?.companyLocation}
+                </p>
                 <p className="text-lg">Phone: {companyDetails?.phone}</p>
                 <button
                   onClick={handleEditClick}
@@ -387,22 +667,51 @@ const CompanyDashboard = () => {
             </button>
           </section>
         );
-
+  
       default:
         return <p className="text-gray-400">Feature coming soon...</p>;
     }
   };
-
+  
+  
+  /////////////////////////////////////////////////////////////Get Cookie////////////////////////////////////////////////////////
   const getCookie = (name: string) => {
     const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`); 
-    if (parts.length === 2) {
-      const part = parts.pop();
-      if (part) {
-        return part.split(';').shift();
-      }
-    }
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return null;  // Return null if cookie is not found
   };
+  
+  /////////////////////////////////////////////////////////////Fetch Company Details////////////////////////////////////////////////////////
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      try {
+        const email = getCookie('userEmail');  // Retrieve the email from cookie
+        if (!email) {
+          console.warn('No email found in session.');
+          return;
+        }
+  
+        const db = getFirestore(app);
+        const companyCollection = collection(db, 'company');
+        const q = query(companyCollection, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+  
+        if (!querySnapshot.empty) {
+          const companyData = querySnapshot.docs[0].data() as CompanyDetails;
+          console.log('Fetched Company Details:', companyData);
+          setCompanyDetails(companyData);
+        } else {
+          console.warn('No company details found for this email.');
+        }
+      } catch (error) {
+        console.error('Error fetching company details:', error);
+      }
+    };
+  
+    fetchCompanyDetails();
+  }, []);
+  
 
   return (
     <div className="company-dashboard bg-gray-900 text-gray-100 min-h-screen flex flex-col">
